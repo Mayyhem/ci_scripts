@@ -1,8 +1,9 @@
+#/usr/bin/env python3
 import os
 import requests
 
 # Configuration
-ORGANIZATION_NAME = os.geten('ORGANIZATION_NAME') # GitHub organization
+ORGANIZATION_NAME = os.geten('GITHUB_ORG') # GitHub organization
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')  # GitHub token
 CIRCLECI_TOKEN = os.getenv('CIRCLECI_TOKEN')  # CircleCI token
 
