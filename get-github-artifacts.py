@@ -1,9 +1,9 @@
-#/usr/bin/env python3
+#!/usr/bin/env python3
 import os
 import requests
 
 # Configuration
-ORGANIZATION_NAME = os.geten('GITHUB_ORG') # GitHub organization
+ORGANIZATION_NAME = os.getenv('GITHUB_ORG') # GitHub organization
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')  # GitHub token
 CIRCLECI_TOKEN = os.getenv('CIRCLECI_TOKEN')  # CircleCI token
 
@@ -16,21 +16,26 @@ headers = {
     'Accept': 'application/vnd.github.v3+json',
 }
 
+github_session = requests.Session()
+github_session.headers.update({'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github.v3+json'})
+
 def get_repos(org_name):
-    """Retrieve all repositories for the given organization."""
     print(f"Retrieving repositories for organization: {org_name}")
     repos = []
-    url = f"{GITHUB_API_URL}/orgs/{org_name}/repos"
-    while url:
-        try:
-            response = requests.get(url, headers=headers)
-            response.raise_for_status()
-            repos.extend(response.json())
-            print(f"Found {len(response.json())} repositories")
-            url = response.links.get('next', {}).get('url')
-        except requests.HTTPError as e:
-            print(f"Failed to retrieve repositories: {e}")
-            break
+    page = 1
+    while True:
+        repos_url = f"{GITHUB_API_URL}/orgs/{org_name}/repos?per_page=100&page={page}"
+        resp = github_session.get(repos_url)
+        resp.raise_for_status()
+        current_page_repos = resp.json()
+        if not current_page_repos:
+            break  # Exit the loop if there are no repositories on this page
+        repos.extend([repo['name'] for repo in current_page_repos])
+        
+        # Check if 'Link' header is present and if it contains a 'next' relation
+        if "next" not in resp.links:
+            break  # Exit the loop if there's no 'next' page
+        page += 1
     return repos
 
 def get_artifacts(repo_name):

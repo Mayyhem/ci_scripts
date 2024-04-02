@@ -49,10 +49,22 @@ def has_completed(project_slug, pipeline_id, workflow_id, job_number):
     return progress.get(progress_key, -1) >= job_number
 
 def get_github_repositories(org_name):
-    repos_url = f"{GITHUB_API_URL}/orgs/{org_name}/repos"
-    resp = github_session.get(repos_url)
-    resp.raise_for_status()
-    return [repo['name'] for repo in resp.json()]
+    repos = []
+    page = 1
+    while True:
+        repos_url = f"{GITHUB_API_URL}/orgs/{org_name}/repos?per_page=100&page={page}"
+        resp = github_session.get(repos_url)
+        resp.raise_for_status()
+        current_page_repos = resp.json()
+        if not current_page_repos:
+            break  # Exit the loop if there are no repositories on this page
+        repos.extend([repo['name'] for repo in current_page_repos])
+        
+        # Check if 'Link' header is present and if it contains a 'next' relation
+        if "next" not in resp.links:
+            break  # Exit the loop if there's no 'next' page
+        page += 1
+    return repos
 
 def download_artifacts_for_project(project_slug):
     print(f"\nProcessing project: {project_slug}")
