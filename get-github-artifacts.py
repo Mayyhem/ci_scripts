@@ -3,9 +3,8 @@ import os
 import requests
 
 # Configuration
-ORGANIZATION_NAME = os.getenv('GITHUB_ORG') # GitHub organization
+GITHUB_ORG = os.getenv('GITHUB_ORG') # GitHub organization
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')  # GitHub token
-CIRCLECI_TOKEN = os.getenv('CIRCLECI_TOKEN')  # CircleCI token
 
 # The base URL for the GitHub API
 GITHUB_API_URL = 'https://api.github.com'
@@ -16,16 +15,13 @@ headers = {
     'Accept': 'application/vnd.github.v3+json',
 }
 
-github_session = requests.Session()
-github_session.headers.update({'Authorization': f'token {GITHUB_TOKEN}', 'Accept': 'application/vnd.github.v3+json'})
-
 def get_repos(org_name):
     print(f"Retrieving repositories for organization: {org_name}")
     repos = []
     page = 1
     while True:
         repos_url = f"{GITHUB_API_URL}/orgs/{org_name}/repos?per_page=100&page={page}"
-        resp = github_session.get(repos_url)
+        resp = requests.get(repos_url, headers=headers)
         resp.raise_for_status()
         current_page_repos = resp.json()
         if not current_page_repos:
@@ -42,7 +38,7 @@ def get_artifacts(repo_name):
     """Retrieve all artifacts for the given repository."""
     print(f"Retrieving artifacts for repository: {repo_name}")
     artifacts = []
-    url = f"{GITHUB_API_URL}/repos/{ORGANIZATION_NAME}/{repo_name}/actions/artifacts"
+    url = f"{GITHUB_API_URL}/repos/{GITHUB_ORG}/{repo_name}/actions/artifacts"
     while url:
         try:
             response = requests.get(url, headers=headers)
@@ -77,19 +73,19 @@ def download_artifact(artifact, repo_name):
         print(f"Failed to download artifact {artifact['id']} from {repo_name}: {e}")
 
 def main():
-    repos = get_repos(ORGANIZATION_NAME)
+    repos = get_repos(GITHUB_ORG)
     if not repos:
         print("No repositories found.")
         return
 
     for repo in repos:
-        artifacts = get_artifacts(repo['name'])
+        artifacts = get_artifacts(repo)
         if not artifacts:
-            print(f"No artifacts found for {repo['name']}.")
+            print(f"No artifacts found for {repo}.")
             continue
 
         for artifact in artifacts:
-            download_artifact(artifact, repo['name'])
+            download_artifact(artifact, repo)
 
 if __name__ == '__main__':
     main()
